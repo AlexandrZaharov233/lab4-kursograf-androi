@@ -59,7 +59,7 @@ internal class RatesRepository(private val source: RatesSource, private val cach
             } catch (_: IOException) {
                 problem = RateProblem.STORAGE
             }
-            RatesUpdate(archive, usingCache = false, problem)
+            RatesUpdate(archive, usingCache = false, problem = problem)
         }
 
     private fun request(day: LocalDate): DailyReply = try {
