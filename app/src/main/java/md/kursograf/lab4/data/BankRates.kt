@@ -26,8 +26,11 @@ internal enum class RateProblem(val message: String) {
     STORAGE("Котировки получены, но Android не смог записать кэш."),
 }
 
-internal class RatesFailure(val problem: RateProblem, cause: Throwable? = null) :
-    Exception(problem.message, cause)
+internal class RatesFailure(
+    val problem: RateProblem,
+    cause: Throwable? = null,
+    val canRetry: Boolean = false,
+) : Exception(problem.message, cause)
 
 internal fun interface RatesSource {
     fun get(day: LocalDate): RatesOnDate
@@ -35,6 +38,7 @@ internal fun interface RatesSource {
 
 private val bankDateFormat = DateTimeFormatter.ofPattern("dd.MM.uuuu", Locale.ROOT)
     .withResolverStyle(ResolverStyle.STRICT)
+private val bankDecimal = Regex("[0-9]{1,12}(?:[.][0-9]{1,12})?")
 private val supportedAbbreviations = Currency.entries.filter { it != Currency.MDL }
     .associateBy { it.name }
 
@@ -59,7 +63,10 @@ internal class BankRatesSource : RatesSource {
             connection.readTimeout = 8_000
             connection.setRequestProperty("Accept", "application/xml, text/xml")
             connection.setRequestProperty("User-Agent", "Kursograf-Android/1.0")
-            if (connection.responseCode !in 200..299) throw RatesFailure(RateProblem.SERVER)
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                throw RatesFailure(RateProblem.SERVER, canRetry = status == 429 || status in 500..599)
+            }
             return connection.inputStream.use { stream ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(4096)
@@ -132,9 +139,10 @@ private fun parseCurrency(parser: XmlPullParser): Pair<Currency, BigDecimal>? {
     parser.require(XmlPullParser.END_TAG, null, "Valute")
     if (abbreviation.isNullOrEmpty()) throw RatesFailure(RateProblem.INVALID)
     val currency = supportedAbbreviations[abbreviation] ?: return null
-    val units = nominal?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
-        ?: throw RatesFailure(RateProblem.INVALID)
-    val price = published?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
-        ?: throw RatesFailure(RateProblem.INVALID)
-    return currency to price.divide(units, MathContext.DECIMAL128)
+    return currency to positiveDecimal(published).divide(positiveDecimal(nominal), MathContext.DECIMAL128)
+}
+
+private fun positiveDecimal(raw: String?): BigDecimal {
+    if (raw == null || !bankDecimal.matches(raw)) throw RatesFailure(RateProblem.INVALID)
+    return raw.toBigDecimal().takeIf { it.signum() > 0 } ?: throw RatesFailure(RateProblem.INVALID)
 }

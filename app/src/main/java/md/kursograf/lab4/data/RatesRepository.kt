@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import md.kursograf.lab4.domain.HISTORY_DAYS
 import md.kursograf.lab4.domain.RateArchive
@@ -62,15 +63,23 @@ internal class RatesRepository(private val source: RatesSource, private val cach
             RatesUpdate(archive, usingCache = false, problem = problem)
         }
 
-    private fun request(day: LocalDate): DailyReply = try {
+    private suspend fun request(day: LocalDate): DailyReply {
+        val first = requestOnce(day)
+        if (!first.canRetry) return first
+        delay(650)
+        return requestOnce(day)
+    }
+
+    private fun requestOnce(day: LocalDate): DailyReply = try {
         DailyReply(day, reading = source.get(day))
     } catch (failure: RatesFailure) {
-        DailyReply(day, problem = failure.problem)
+        DailyReply(day, problem = failure.problem, canRetry = failure.canRetry)
     }
 
     private data class DailyReply(
         val day: LocalDate,
         val reading: RatesOnDate? = null,
         val problem: RateProblem? = null,
+        val canRetry: Boolean = false,
     )
 }

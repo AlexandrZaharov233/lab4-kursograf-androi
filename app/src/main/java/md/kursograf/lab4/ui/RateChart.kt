@@ -42,7 +42,7 @@ internal fun RateChart(points: List<RatePoint>, firstDay: LocalDate, lastDay: Lo
 
     Canvas(
         modifier = Modifier.fillMaxWidth().height(176.dp).semantics {
-            contentDescription = "Линейный график за $days с интервалом в ${days + 1} день. " +
+            contentDescription = "Линейный график. Дней в периоде: ${days + 1}. " +
                 "Котировок ${points.size}. Минимум $minimum, максимум $maximum."
         },
     ) {
@@ -51,6 +51,7 @@ internal fun RateChart(points: List<RatePoint>, firstDay: LocalDate, lastDay: Lo
         }
         val left = yLabels.maxOf { it.size.width } + 9.dp.toPx()
         val right = size.width - 4.dp.toPx()
+        if (right <= left) return@Canvas
         val top = 13.dp.toPx()
         val bottom = size.height - 24.dp.toPx()
 
@@ -71,7 +72,8 @@ internal fun RateChart(points: List<RatePoint>, firstDay: LocalDate, lastDay: Lo
         }
         for (day in dateTicks) {
             val label = textMeasurer.measure(day.format(chartDateFormat), labelStyle)
-            val labelX = (x(day) - label.size.width / 2f).coerceIn(0f, size.width - label.size.width)
+            val lastX = (size.width - label.size.width).coerceAtLeast(0f)
+            val labelX = (x(day) - label.size.width / 2f).coerceIn(0f, lastX)
             drawText(label, topLeft = Offset(labelX, bottom + 6.dp.toPx()))
         }
 
@@ -89,8 +91,19 @@ internal fun RateChart(points: List<RatePoint>, firstDay: LocalDate, lastDay: Lo
                 lineTo(start.x, bottom)
                 close()
             }
-            drawPath(fill, Brush.verticalGradient(listOf(colors.primary.copy(alpha = 0.27f), colors.primary.copy(alpha = 0.04f)), top, bottom))
-            drawPath(line, colors.primary, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(
+                fill,
+                Brush.verticalGradient(
+                    listOf(colors.primary.copy(alpha = 0.27f), colors.primary.copy(alpha = 0.04f)),
+                    top,
+                    bottom,
+                ),
+            )
+            drawPath(
+                line,
+                colors.primary,
+                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
         }
         drawCircle(colors.primary, radius = 4.dp.toPx(), center = end)
         drawCircle(colors.surface, radius = 1.5.dp.toPx(), center = end)
