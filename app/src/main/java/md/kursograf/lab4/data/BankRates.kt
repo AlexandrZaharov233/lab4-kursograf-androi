@@ -35,6 +35,7 @@ internal fun interface RatesSource {
 
 private val bankDateFormat = DateTimeFormatter.ofPattern("dd.MM.uuuu", Locale.ROOT)
     .withResolverStyle(ResolverStyle.STRICT)
+private val bankDecimal = Regex("[0-9]{1,12}(?:[.][0-9]{1,12})?")
 private val supportedAbbreviations = Currency.entries.filter { it != Currency.MDL }
     .associateBy { it.name }
 
@@ -132,9 +133,10 @@ private fun parseCurrency(parser: XmlPullParser): Pair<Currency, BigDecimal>? {
     parser.require(XmlPullParser.END_TAG, null, "Valute")
     if (abbreviation.isNullOrEmpty()) throw RatesFailure(RateProblem.INVALID)
     val currency = supportedAbbreviations[abbreviation] ?: return null
-    val units = nominal?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
-        ?: throw RatesFailure(RateProblem.INVALID)
-    val price = published?.toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
-        ?: throw RatesFailure(RateProblem.INVALID)
-    return currency to price.divide(units, MathContext.DECIMAL128)
+    return currency to positiveDecimal(published).divide(positiveDecimal(nominal), MathContext.DECIMAL128)
+}
+
+private fun positiveDecimal(raw: String?): BigDecimal {
+    if (raw == null || !bankDecimal.matches(raw)) throw RatesFailure(RateProblem.INVALID)
+    return raw.toBigDecimal().takeIf { it.signum() > 0 } ?: throw RatesFailure(RateProblem.INVALID)
 }

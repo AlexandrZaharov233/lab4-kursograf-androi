@@ -52,7 +52,7 @@ internal data class RateArchive(
     }
 
     val observations: List<RatesOnDate> = byRequestDate.toSortedMap()
-        .values
+        .values.reversed()
         .distinctBy { it.date }
         .sortedBy { it.date }
 
