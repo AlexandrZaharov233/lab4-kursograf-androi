@@ -2,6 +2,7 @@ package md.kursograf.lab4.data
 
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.runBlocking
 import md.kursograf.lab4.domain.Currency
 import md.kursograf.lab4.domain.RateArchive
@@ -74,6 +75,23 @@ class RatesRepositoryTest {
         assertEquals(listOf(today.plusDays(1)), requests.toList())
         assertEquals(30, second.archive?.byRequestDate?.size)
         assertEquals(today.plusDays(1), second.archive?.through)
+    }
+
+    @Test
+    fun retriesATemporaryServerFailureOnceAndStoresTheRecoveredDay() = runBlocking {
+        val attempts = AtomicInteger()
+        val store = JsonMemoryCache()
+        val repo = RatesRepository(RatesSource { day ->
+            if (day == today && attempts.incrementAndGet() == 1) {
+                throw RatesFailure(RateProblem.SERVER, canRetry = true)
+            }
+            sample(day)
+        }, store)
+
+        val result = repo.refresh(today, null)
+        assertEquals(2, attempts.get())
+        assertEquals(30, result.archive?.byRequestDate?.size)
+        assertNull(result.problem)
     }
 
     private fun sample(day: LocalDate) = RatesOnDate(day, mapOf(Currency.EUR to "20.20".toBigDecimal()))

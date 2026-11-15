@@ -26,8 +26,11 @@ internal enum class RateProblem(val message: String) {
     STORAGE("Котировки получены, но Android не смог записать кэш."),
 }
 
-internal class RatesFailure(val problem: RateProblem, cause: Throwable? = null) :
-    Exception(problem.message, cause)
+internal class RatesFailure(
+    val problem: RateProblem,
+    cause: Throwable? = null,
+    val canRetry: Boolean = false,
+) : Exception(problem.message, cause)
 
 internal fun interface RatesSource {
     fun get(day: LocalDate): RatesOnDate
@@ -60,7 +63,10 @@ internal class BankRatesSource : RatesSource {
             connection.readTimeout = 8_000
             connection.setRequestProperty("Accept", "application/xml, text/xml")
             connection.setRequestProperty("User-Agent", "Kursograf-Android/1.0")
-            if (connection.responseCode !in 200..299) throw RatesFailure(RateProblem.SERVER)
+            val status = connection.responseCode
+            if (status !in 200..299) {
+                throw RatesFailure(RateProblem.SERVER, canRetry = status == 429 || status in 500..599)
+            }
             return connection.inputStream.use { stream ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(4096)
