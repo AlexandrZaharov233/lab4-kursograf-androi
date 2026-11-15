@@ -80,7 +80,7 @@ git branch
 
    Первый push публикует начальный README и создаёт базовую ветку `main`. Исходники попадают в `main` через следующие четыре PR.
 
-3. В GitHub открой **Pull requests → New pull request**. Выбирай **base: main** и ветку **compare** из таблицы. Нажми **Create pull request**, заполни заголовок и создай PR. Открой меню слияния, выбери **Create a merge commit**, затем **Merge pull request → Confirm merge**. Сначала заверши текущий PR и переходи к следующему. Ветки можно оставить в репозитории для защиты. [Слияние Pull Request](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/merging-a-pull-request)
+3. В GitHub открой **Pull requests → New pull request**. Выбирай **base: main** и ветку **compare** из таблицы. Нажми **Create pull request**, заполни заголовок и создай PR. Открой меню слияния, выбери **Create a merge commit**, затем **Merge pull request → Confirm merge**. Сначала заверши текущий PR и переходи к следующему. Оставь ветки в репозитории для защиты. Если пункт слияния недоступен, открой **Settings → General → Pull Requests** и включи **Allow merge commits**. [Слияние Pull Request](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/merging-a-pull-request)
 
    | Порядок | Ветка compare | Заголовок |
    |---|---|---|
@@ -130,7 +130,26 @@ git branch
    ```
 
 4. На конвертере проверь надпись **Данные из кэша** с датой. Снова открой **Неделя** и **Месяц**. Ранее полученные графики и статистика должны открыться. Отключи режим полёта, включи Wi-Fi и нажми **Обновить** для повторной синхронизации.
-5. Для отчёта зафиксируй факт своего запуска и добавь в раздел 6 собственный пример работы с ИИ при переходе на Kotlin. Если меняешь отчёт после слияния, создай отдельную ветку и отправь изменение через ещё один PR.
+5. Для отчёта зафиксируй результат своего запуска и добавь в раздел 6 собственный пример работы с ИИ при переходе на Kotlin. Для изменения после слияния создай отдельную ветку из актуального `main`.
+
+   ```powershell
+   git switch main
+   git pull --ff-only origin main
+   git switch -c 05-lichnaya-proverka
+   notepad REPORT.md
+   ```
+
+   Сохрани отчёт. Если Git впервые создаёт коммит в этом проекте, задай имя и почту в конфигурации проекта. Можно использовать адрес `noreply`, указанный в **GitHub → Settings → Emails**. Замени примеры своими данными.
+
+   ```powershell
+   git config user.name "Имя Фамилия"
+   git config user.email "адрес-из-настроек-GitHub"
+   git add REPORT.md
+   git commit -m "Дополнить отчёт результатами запуска в эмуляторе"
+   git push -u origin 05-lichnaya-proverka
+   ```
+
+   Создай PR с **base: main** и **compare: 05-lichnaya-proverka**, затем выполни слияние так же, как на шаге 4.
 
 ## Если запуск остановился на ошибке
 
