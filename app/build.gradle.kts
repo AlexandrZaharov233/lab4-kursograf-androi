@@ -37,6 +37,7 @@ kotlin {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.activity:activity-compose:1.11.0")
+    implementation("androidx.navigation:navigation-compose:2.9.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4")
     implementation("androidx.compose.foundation:foundation")
